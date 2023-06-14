@@ -1,0 +1,7 @@
+name = "Rewards"
+uuid = "712dd82c-687b-429d-a53a-9235c9f2416e"
+authors = ["Sven Duve <svenduve@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+RLTypes = "14dbba7a-fc20-4137-9b12-b6af9aaed9be"
