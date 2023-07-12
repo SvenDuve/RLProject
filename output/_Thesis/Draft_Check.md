@@ -1,9 +1,0 @@
-Differential Equations serve as the cornerstone in numerous scientific disciplines for modelling real-world dynamic processes and their temporal evolution. Typically, this approach involves integrating the differential—a small change with respect to some continuous variable—of an unknown function and its derivatives over a slight variation in the underlying state. 
-
-Consider, for instance, the modelling of population dynamics, where the change in population size can be depicted through the birth and death rates over a specified time interval. The subsequent step involves integrating this equation, either analytically or numerically, with respect to a variable—often time, $t$. The resultant solution, presented as a vector field, allows the inference of the state of the underlying process at a given time for specified initial conditions. 
-
-Such methodology has empowered scientists to predict physical, chemical, and biological processes that were otherwise challenging or impossible to model. Nevertheless, traditional differential equations exhibit limitations when tasked with modelling complex systems characterized by high-dimensional data, non-linearity, or uncertain dynamics. Such systems might include the weather, stock markets, or any systems subject to noise or disturbances. 
-
-These limitations have hindered the application of differential equations within the realm of machine learning, where function parameters are often not given explicitly but are instead embedded within large volumes of data. To overcome these constraints, Chen et al. (2018) innovatively integrated Neural Networks with the concept of differential equations, introducing Neural Ordinary Differential Equations (NODEs) to the fields of Machine Learning (ML) and Reinforcement Learning (RL). 
-
-Remember to always have a strong narrative that connects each section and supports the overall thesis objectives.
