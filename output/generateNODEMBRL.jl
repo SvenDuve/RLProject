@@ -1,4 +1,4 @@
-#julia -p 9 ./output/generateNODEMBRL.jl
+#julia -p 6 ./output/generateNODEMBRL.jl
 
 using Distributed
 
@@ -15,11 +15,11 @@ end
 
 
 
-@time DDPG_MBRL_NODE_Pendulum = @distributed (vcat) for i=1:10
-    MBRLAgent(NODEModel(), Pendulum(), AgentParameter(training_episodes=500, train_start=2), ModelParameter(retrain = 5000))
-end
+# @time DDPG_MBRL_NODE_Pendulum = @distributed (vcat) for i=1:10
+#     MBRLAgent(NODEModel(), Pendulum(), AgentParameter(training_episodes=500, train_start=2), ModelParameter(retrain = 5000))
+# end
 
-@save "./output/Pendulum/DDPG_MBRL_NODE_Pendulum.bson" DDPG_MBRL_NODE_Pendulum 
+# @save "./output/Pendulum/DDPG_MBRL_NODE_Pendulum.bson" DDPG_MBRL_NODE_Pendulum 
 
 
 @time DDPG_MBRL_NODE_LunarLanderContinuous = @distributed (vcat) for i=1:10

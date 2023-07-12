@@ -93,81 +93,94 @@ function agent(environment::DiscreteEnvironment, agentParams::AgentParameter)
     envParams.state_bound_high =   env.observation_space.high
     envParams.state_bound_low =    env.observation_space.low
 
-    episode = 1
-
+    
     global Qϕ = set_q_function(envParams.state_size, envParams.action_size)
     global Qϕ´ = deepcopy(Qϕ)
-
-    opt_critic = Flux.setup(Flux.Optimise.Adam(agentParams.critic_η), Qϕ)
-
+    
+    global opt_critic = Flux.setup(Flux.Optimise.Adam(agentParams.critic_η), Qϕ)
+    
     buffer = DiscreteReplayBuffer(agentParams.buffer_size)
-    step_counter = 0
+    
+    
+    episode = 1
+    frames = 1
+    steps = 0
+    s, info = env.reset()
+    episode_rewards = 0
+    t = false
 
-    while episode ≤ agentParams.training_episodes
+    while true
 
-        frames = 0
-        s, info = env.reset()
-        episode_rewards = 0
-        t = false
-
-        for step in 1:agentParams.maximum_episode_length
-
-            set_greediness!(agentParams, step_counter)
-
-            a = ϵ_greedy(Qϕ, s, agentParams, envParams)
-            s´, r, terminated, truncated, _ =  env.step(a)
-            step_counter += 1
-
-            terminated | truncated ? t = true : t = false
-
-            episode_rewards += r
-
-            remember(buffer, s, a, r, s´, t)
-
-            if episode > agentParams.train_start
-                S, A, R, S´, T = sample(buffer, AgentMethod(), agentParams.batch_size)
-                train_step!(S, A, R, S´, T, Qϕ, Qϕ´, opt_critic, agentParams, envParams)
-            end
-
-            s = s´
-            frames += 1
-
-            if t
-                env.close()
-                break
-            end
-
+        if agentParams.train_type isa Epoch
+            steps > agentParams.training_epochs * agentParams.epoch_length - 1 ? break : nothing
+        elseif agentParams.train_type isa Episode
+            episode > agentParams.training_episodes ? break : nothing
         end
 
+        set_greediness!(agentParams, steps)
+
+        a = ϵ_greedy(Qϕ, s, agentParams, envParams)
+        s´, r, terminated, truncated, _ =  env.step(a)
+        steps += 1
+        
+        terminated | truncated ? t = true : t = false
+        
+        episode_rewards += r
+        append!(agentParams.all_rewards, r)
+
+        remember(buffer, s, a, r, s´, t)
+        
+        
+        if episode > agentParams.train_start
+            S, A, R, S´, T = sample(buffer, AgentMethod(), agentParams.batch_size)
+            train_step!(S, A, R, S´, T, Qϕ, Qϕ´, opt_critic, agentParams, envParams)
+        end
 
         if episode % 2 == 0
             Qϕ´ = deepcopy(Qϕ)
         end
 
-        if episode % agentParams.store_frequency == 0
-            push!(agentParams.trained_agents, deepcopy(Qϕ))
-        end
-
-        critic_loss = []
-
-        for l in 1:10
-            
-            S, A, R, S´, T = sample(buffer, AgentMethod(), agentParams.batch_size)
-            
-            # critic loss
-            Y = R .+ agentParams.γ .* (1 .- T) .* maximum(Qϕ´(S´), dims=1)'
-            push!(critic_loss, Flux.Losses.huber_loss(sum(onehotbatch(vcat(A...), envParams.labels) .* Qϕ(vcat(S)), dims=1), Y'))
-
-        end
-
-        push!(agentParams.critic_loss, mean(critic_loss))
-        push!(agentParams.episode_steps, frames)
-        push!(agentParams.episode_reward, episode_rewards)
-
-        println("Episode: $episode | Cumulative Reward: $(round(episode_rewards, digits=2)) | Critic Loss: $(agentParams.critic_loss[end])") #  | Actor Loss: $(agentParams.actor_loss[end]) | Steps: $(frames)")
         
-       
-        episode += 1
+        s = s´
+        frames += 1
+
+        
+        
+        if t
+            s, info = env.reset()
+            t = false
+            critic_loss = []
+            
+            for l in 1:10
+                
+                S, A, R, S´, T = sample(buffer, AgentMethod(), agentParams.batch_size)
+                
+                # critic loss
+                Y = R .+ agentParams.γ .* (1 .- T) .* maximum(Qϕ´(S´), dims=1)'
+                push!(critic_loss, Flux.Losses.huber_loss(sum(onehotbatch(vcat(A...), envParams.labels) .* Qϕ(vcat(S)), dims=1), Y'))
+                
+            end
+            
+            if episode % agentParams.store_frequency == 0
+                push!(agentParams.trained_agents, deepcopy(Qϕ))
+            end
+            
+            push!(agentParams.critic_loss, mean(critic_loss))
+            push!(agentParams.episode_steps, frames)
+            push!(agentParams.episode_reward, episode_rewards)
+            
+            println("Episode: $episode | Cumulative Reward: $(round(episode_rewards, digits=2)) | Critic Loss: $(agentParams.critic_loss[end])") #  | Actor Loss: $(agentParams.actor_loss[end]) | Steps: $(frames)")
+            
+            frames = 0
+            episode += 1
+            episode_rewards = 0
+            
+            continue
+            
+        end
+        
+        
+        
 
     end
 

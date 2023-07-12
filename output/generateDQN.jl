@@ -13,17 +13,17 @@ end
     using BSON: @save 
 end
 
-@time DQN_MF_Agent_Acrobot = @distributed (vcat) for i=1:10
+@time Episode_DQN_MF_Agent_Acrobot = @distributed (vcat) for i=1:10
     agent(Acrobot(), AgentParameter(training_episodes=500, train_start=2))
 end
 
 
-@save "DQN_MF_Agent_Acrobot.bson" DQN_MF_Agent_Acrobot 
+@save "./output/Acrobot/Episode_DQN_MF_Agent_Acrobot.bson" Episode_DQN_MF_Agent_Acrobot 
 
 
-@time DQN_MF_Agent_LunarLanderDiscrete = @distributed (vcat) for i=1:10
-    agent(LunarLanderDiscrete(), AgentParameter(training_episodes=500, train_start=2))
+@time Epoch_DQN_MF_Agent_LunarLanderDiscrete = @distributed (vcat) for i=1:10
+    agent(LunarLanderDiscrete(), AgentParameter(train_type=Epoch(), training_epochs=100, train_start=2))
 end
 
 
-@save "DQN_MF_Agent_LunarLanderDiscrete.bson" DQN_MF_Agent_LunarLanderDiscrete 
+@save "./output/LunarLanderDiscrete/Epoch_DQN_MF_Agent_LunarLanderDiscrete.bson" Epoch_DQN_MF_Agent_LunarLanderDiscrete 

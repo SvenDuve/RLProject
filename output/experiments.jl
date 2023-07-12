@@ -181,12 +181,94 @@ function plot_comparison(baseline, modelbased, title, series_one, series_two; yl
 
 end
 
+file = "output/LunarLanderDiscrete/Epoch_DQN_MBRL_NODE_LunarLanderDiscrete.bson"
+data = BSON.load(file)
+plot(sum_interval(data[:Epoch_DQN_MBRL_NODE_LunarLanderDiscrete][1][1].all_rewards, 1000))
+
+
+
+file_2 = "Epoch_DQN_MF_Agent_LunarLanderDiscrete.bson"
+data_2 = BSON.load(file_2)
+plot(sum_interval(data_2[:Epoch_DQN_MF_Agent_LunarLanderDiscrete][1].all_rewards, 1000))
+
+
+#Epoch helper function
+function sum_interval(arr::Array, interval::Int)
+    sums = []
+    for i in 1:interval:length(arr)
+        push!(sums, sum(arr[i:min(i+interval-1, end)]))
+    end
+    return sums
+end
+
+
+function epochChartMB(file, interval, epochs)
+    
+    data = BSON.load(file)
+    df = DataFrame()
+
+    # Create column names and data in a for loop
+
+    for el in values(data)
+        for (i, item) in enumerate(el) 
+            colname = "Rewards_$i"
+            df[!, colname] = sum_interval(item[1].all_rewards[1:150000], interval)
+        end
+    end
+
+    @show df
+
+    df[!, :mean] = mean.(eachrow(df))
+    df[!, :max] = maximum.(eachrow(df))
+    df[!, :min] = minimum.(eachrow(df))
+
+    pl = plot(df.mean, color = :blue, title="Lunar Lander DDPG Reward", label="DDPG")
+    pl = plot!(df.min, fillrange=df.max, color=:blue, fillalpha=0.2, linealpha=0.0, label="Max - Min")
+    # savefig("output/Acrobot/DQN_Acrobot.png")
+
+    return pl
+end
+
+
+function epochChartMF(file, interval, epochs)
+    
+    data = BSON.load(file)
+    df = DataFrame()
+
+    # Create column names and data in a for loop
+
+    for el in values(data)
+        for (i, item) in enumerate(el) 
+            colname = "Rewards_$i"
+            df[!, colname] = sum_interval(item.all_rewards[1:150000], interval)
+        end
+    end
+
+    df[!, :mean] = mean.(eachrow(df))
+    df[!, :max] = maximum.(eachrow(df))
+    df[!, :min] = minimum.(eachrow(df))
+
+    pl = plot(df.mean, color = :blue, title="Lunar Lander DDPG Reward", label="DDPG")
+    pl = plot!(df.min, fillrange=df.max, color=:blue, fillalpha=0.2, linealpha=0.0, label="Max - Min")
+    # savefig("output/Acrobot/DQN_Acrobot.png")
+
+    return pl
+end
+
+
+epochChartMB(file, 3000, 1000)
+epochChartMF(file_2, 3000, 1000)
+
+
 
 # Acrobot Reward Curves
 
 acrobot_mf = "output/Acrobot/DQN_MF_Agent_Acrobot.bson"
-acrobot_odernn = "./output/Acrobot/DQN_MBRL_ODERNN_Acrobot.bson"
+acrobot_odernn = "output/Acrobot/DQN_MBRL_ODERNN_Acrobot.bson"
 acrobot_node = "output/Acrobot/DQN_MBRL_NODE_Acrobot.bson"
+epoch_acrobot_node = "output/Acrobot/Epoch_DQN_MBRL_NODE_Acrobot.bson"
+
+
 
 p1 = plot_agents(ModelFree(), acrobot_mf, "Acrobot", "DQN")
 p2 = plot_agents(ModelBased(), acrobot_odernn, "Acrobot", "ODE-RNN")
@@ -670,6 +752,23 @@ end
 
 
 
+# a loop with two coditional break conditions
+
+epochs = true
+episodes = false
+n_epochs = 0
+n_episodes = 0
+
+
+while true 
+    println("Epochs... $n_epochs")
+    println("Episodes... $n_episodes")
+    if epochs
+        n_epochs > 10 ? break : n_epochs += 1
+    elseif episodes
+        n_episodes > 10 ? break : n_episodes += 1
+    end
+end
 
 
 

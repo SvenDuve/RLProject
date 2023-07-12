@@ -14,6 +14,8 @@ export Parameter,
         Methods,
         AgentMethod,
         ModelMethod,
+        Episode,
+        Epoch,
         Environments,
         DiscreteEnvironment,
         ContinuousEnvironment,
@@ -48,6 +50,8 @@ struct BipedalWalker <: ContinuousEnvironment end
 
 struct AgentMethod <: Methods end
 struct ModelMethod <: Methods end
+struct Episode <: Methods end
+struct Epoch <: Methods end
 
 struct NODEModel <: Models end
 struct ODERNNModel <: Models end
@@ -73,6 +77,7 @@ struct ODERNNModel <: Models end
 end
 
 @with_kw mutable struct AgentParameter <: Parameter
+    train_type::Methods =                   Episode()
     # Buffer size
     buffer_size::Int =                      1000000
     # Exploration Continuous
@@ -87,11 +92,14 @@ end
     ϵ_decay::Float32 =                      0.999f0
     # Training Metrics
     training_episodes::Int =                20
+    training_epochs::Int =                  10
+    epoch_length::Int =                     2000
     maximum_episode_length::Int =           2000
     train_start:: Int =                     10
     batch_size::Int =                       64
     # Metrics
     episode_reward::Array{Float32} =        []
+    all_rewards::Array{Float32} =           []
     critic_loss::Array{Float32} =           [0.f0]
     actor_loss::Array{Float32} =            [0.f0]
     episode_steps::Array{Int} =             []

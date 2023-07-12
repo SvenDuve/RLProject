@@ -58,7 +58,7 @@ function (m::ODE_RNN)(timestamps, datapoints, hidden)
         f!(u, p, t) = m.f_theta(u)
         prob = ODEProblem(f!, h[:,i], tspan)
         # sol = solve(prob, AutoTsit5(Rodas4()), reltol=1e-3, abstol=1e-5, save_everystep = false)#, Tsit5(), reltol=1e-8, abstol=1e-8)
-        sol = solve(prob, alg_hints = [:stiff], save_everystep = false, save_start = false)#, Tsit5(), reltol=1e-8, abstol=1e-8)
+        sol = solve(prob, alg_hints = [:stiff], save_everystep = false, save_start = false, verbose=false)#, Tsit5(), reltol=1e-8, abstol=1e-8)
         # if sol.retcode != :Success
         #     println("It happens here")
         # end

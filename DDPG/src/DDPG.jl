@@ -125,84 +125,98 @@ function agent(environment::ContinuousEnvironment, agentParams::AgentParameter)
     envParams.state_bound_high =   env.observation_space.high
     envParams.state_bound_low =    env.observation_space.low
 
-    episode = 1
-
+    
     μθ = setActor(envParams.state_size, envParams.action_size)
     μθ´= deepcopy(μθ)
     Qϕ = setCritic(envParams.state_size, envParams.action_size)
     Qϕ´= deepcopy(Qϕ)
-
+    
     global opt_critic = Flux.setup(Flux.Optimise.Adam(agentParams.critic_η), Qϕ)
     global opt_actor = Flux.setup(Flux.Optimise.Adam(agentParams.actor_η), μθ)
     
     buffer = ReplayBuffer(agentParams.buffer_size)
+    
+    episode = 1
+    frames = 1
+    steps = 0
+    s, info = env.reset()
+    episode_rewards = 0
+    t = false
 
-    while episode ≤ agentParams.training_episodes
 
-        frames = 0
-        s, info = env.reset()
-        episode_rewards = 0
-        t = false
+    while true
+
+        if agentParams.train_type isa Epoch
+            steps > agentParams.training_epochs * agentParams.epoch_length - 1 ? break : nothing
+        elseif agentParams.train_type isa Episode
+            episode > agentParams.training_episodes ? break : nothing
+        end
+
+                        
+        a = action(μθ, s, true, envParams, agentParams)
+        s´, r, terminated, truncated, _ = env.step(a)
+        steps += 1
+
+        terminated | truncated ? t = true : t = false
+
+        episode_rewards += r
+        append!(agentParams.all_rewards, r)
+
+
+        remember(buffer, s, a, r, s´, t)
+
+        if episode > agentParams.train_start
+
+            S, A, R, S´, T = sample(buffer, AgentMethod(), agentParams.batch_size)
+            train_step!(S, A, R, S´, T, μθ, μθ´, Qϕ, Qϕ´, opt_critic, opt_actor, agentParams)
+            
+        end
+
         
-        for step in 1:agentParams.maximum_episode_length
+        s = s´
+        frames += 1
+
+        
+        
+        if t
+            s, info = env.reset()
+            t = false
+            actor_loss = []
+            critic_loss = []
             
-            a = action(μθ, s, true, envParams, agentParams)
-            s´, r, terminated, truncated, _ = env.step(a)
-
-            terminated | truncated ? t = true : t = false
-
-            episode_rewards += r
-            
-            remember(buffer, s, a, r, s´, t)
-
-            if episode > agentParams.train_start
-
+            for l in 1:10
+                
                 S, A, R, S´, T = sample(buffer, AgentMethod(), agentParams.batch_size)
-                train_step!(S, A, R, S´, T, μθ, μθ´, Qϕ, Qϕ´, opt_critic, opt_actor, agentParams)
+                
+                # actor loss 
+                push!(actor_loss, -mean(Qϕ(vcat(S, μθ(S)))))
+                
+                # critic loss
+                Y = R' .+ agentParams.γ * (1 .- T)' .* Qϕ´(vcat(S´, μθ´(S´)))
+                push!(critic_loss, Flux.Losses.mse(Qϕ(vcat(S, A)), Y))
                 
             end
-
             
-            s = s´
-            frames += 1
-            
-            if t
-                env.close()
-                break
+            if episode % agentParams.store_frequency == 0
+                push!(agentParams.trained_agents, deepcopy(μθ))
             end
             
-        end
-
-        
-        if episode % agentParams.store_frequency == 0
-            push!(agentParams.trained_agents, deepcopy(μθ))
-        end
-
-        actor_loss = []
-        critic_loss = []
-
-        for l in 1:10
+            push!(agentParams.critic_loss, mean(critic_loss))
+            push!(agentParams.actor_loss, mean(actor_loss))
+            push!(agentParams.episode_steps, frames)
+            push!(agentParams.episode_reward, episode_rewards)
             
-            S, A, R, S´, T = sample(buffer, AgentMethod(), agentParams.batch_size)
+            println("Episode: $episode | Cumulative Reward: $(round(episode_rewards, digits=2)) | Critic Loss: $(agentParams.critic_loss[end]) | Actor Loss: $(agentParams.actor_loss[end]) | Steps: $(frames)")
             
-            # actor loss 
-            push!(actor_loss, -mean(Qϕ(vcat(S, μθ(S)))))
+            frames = 0
+            episode += 1
+            episode_rewards = 0
             
-            # critic loss
-            Y = R' .+ agentParams.γ * (1 .- T)' .* Qϕ´(vcat(S´, μθ´(S´)))
-            push!(critic_loss, Flux.Losses.mse(Qϕ(vcat(S, A)), Y))
-
+            continue
+            
         end
         
-        push!(agentParams.critic_loss, mean(critic_loss))
-        push!(agentParams.actor_loss, mean(actor_loss))
-        push!(agentParams.episode_steps, frames)
-        push!(agentParams.episode_reward, episode_rewards)
-
-        println("Episode: $episode | Cumulative Reward: $(round(episode_rewards, digits=2)) | Critic Loss: $(agentParams.critic_loss[end]) | Actor Loss: $(agentParams.actor_loss[end]) | Steps: $(frames)")
         
-        episode += 1
-    
     end
     
     return agentParams
